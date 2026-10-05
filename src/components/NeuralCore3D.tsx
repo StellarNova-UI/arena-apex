@@ -1,6 +1,19 @@
-import { useRef } from "react";
+import { Component, useRef, type ReactNode } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import type { Mesh } from "three";
+
+class WebGLBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+    state = { failed: false };
+
+    static getDerivedStateFromError() {
+        return { failed: true };
+    }
+
+    render() {
+        if (this.state.failed) return null;
+        return this.props.children;
+    }
+}
 
 const AnimatedCore = () => {
     const sphereRef = useRef<Mesh>(null);
@@ -30,14 +43,16 @@ const AnimatedCore = () => {
 
 const NeuralCore3D = () => {
     return (
-        <div className="w-[300px] h-[300px] md:w-[500px] md:h-[500px]">
-            <Canvas camera={{ position: [0, 0, 5] }}>
-                <ambientLight intensity={0.5} />
-                <directionalLight position={[10, 10, 5]} intensity={1} />
-                <pointLight position={[-10, -10, -5]} color="#22d3ee" intensity={1} />
-                <AnimatedCore />
-            </Canvas>
-        </div>
+        <WebGLBoundary>
+            <div className="w-[300px] h-[300px] md:w-[500px] md:h-[500px]">
+                <Canvas camera={{ position: [0, 0, 5] }}>
+                    <ambientLight intensity={0.5} />
+                    <directionalLight position={[10, 10, 5]} intensity={1} />
+                    <pointLight position={[-10, -10, -5]} color="#22d3ee" intensity={1} />
+                    <AnimatedCore />
+                </Canvas>
+            </div>
+        </WebGLBoundary>
     );
 };
 
